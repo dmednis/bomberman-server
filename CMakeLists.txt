@@ -3,5 +3,10 @@ project(bomberman_server C)
 
 set(CMAKE_C_STANDARD 90)
 
-add_executable(bomberman_server main.c net.h net.c game.h input.h input.c game.c player.c player.h)
+find_package(Curses REQUIRED)
+include_directories(${CURSES_INCLUDE_DIR})
+
+add_executable(bomberman_server main.c net.h net.c game.h input.h input.c game.c player.c player.h libs.h)
 add_executable(test_server test_server.c)
+
+target_link_libraries(bomberman_server ${CURSES_LIBRARIES})

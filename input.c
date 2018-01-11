@@ -17,12 +17,14 @@ void* input_reader(void* arg) {
         }
         bzero(input, 64);
     }
+    return NULL;
 }
 
 
-int create_input_reader_thread() {
+pthread_t create_input_reader_thread() {
     pthread_t input_reader_thread;
     pthread_create(&input_reader_thread, NULL, input_reader, NULL);
+    return input_reader_thread;
 }
 
 

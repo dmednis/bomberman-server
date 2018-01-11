@@ -5,7 +5,7 @@
 #ifndef BOMBERMAN_SERVER_INPUT_H
 #define BOMBERMAN_SERVER_INPUT_H
 
-int create_input_reader_thread();
+pthread_t create_input_reader_thread();
 
 void input_reader(void*);
 

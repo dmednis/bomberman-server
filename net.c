@@ -1,15 +1,6 @@
-#include<stdio.h>
-#include<string.h>    //strlen
-#include<stdlib.h>    //strlen
-#include<sys/socket.h>
-#include<arpa/inet.h> //inet_addr
-#include<unistd.h>    //write
-#include<pthread.h> //for threading , link with lpthread
-#include <assert.h>
-
 #include "net.h"
 
-int listen_socket;
+//int listen_socket;
 SocketList *socketlist;
 
 SocketList *create_socketlist() {
@@ -31,7 +22,9 @@ Socket *create_socket(int *socket_d, pthread_t *thread) {
     return socket;
 }
 
-Socket *put_socket(SocketList *list, Socket *socket) {
+Socket *put_socket(Socket *socket) {
+    SocketList *list = socketlist;
+
     if (list->tail != NULL) {
         list->tail->next = socket;
         socket->prev = list->tail;
@@ -46,7 +39,8 @@ Socket *put_socket(SocketList *list, Socket *socket) {
     return socket;
 }
 
-void delete_socket(SocketList *list, Socket *socket) {
+void delete_socket(Socket *socket) {
+    SocketList *list = socketlist;
 
     pthread_kill((pthread_t)socket->thread, SIGTERM);
     shutdown(*socket->socket, SHUT_RDWR);
@@ -103,8 +97,6 @@ int create_server() {
     //Listen
     listen(socket_desc, 3);
 
-    listen_socket = socket_desc;
-
     return socket_desc;
 }
 
@@ -113,63 +105,26 @@ void stop_server() {
     Socket *curr = socketlist->head;
 
     while (curr) {
-        delete_socket(socketlist, curr);
+        delete_socket(curr);
         curr = socketlist->head;
     }
 }
 
-/*
- * This will handle connection for each client
- * */
-void *connection_handler(void *socket) {
-    //Get the socket descriptor
-    Socket *sock = (Socket *) socket;
-    int socket_d = *sock->socket;
-    printf("%d\n", socket_d);
-    int read_size;
-    char *client_message[1000];
-
-    put_socket(socketlist, sock);
-
-    //Receive a message from client
-    while ((read_size = recv(socket_d, client_message, 2000, 0)) > 0) {
-        //Send the message back to client
-        puts(client_message);
-        char response[3] = {'2', '0', '1'};
-        write(socket_d, response, 3);
-        bzero(client_message, 1000);
-    }
-
-    if (read_size == 0) {
-
-        puts("Client disconnected");
-        fflush(stdout);
-    } else if (read_size == -1) {
-        perror("recv failed");
-    }
-
-    delete_socket(socketlist, sock);
-
-    return 0;
-}
 
 
-int the_socket;
 
-int bind_connection_handler(int socket) {
+int bind_connection_handler(int socket, void(*handler)) {
     int new_socket, c, *new_sock;
     struct sockaddr_in client;
-    char *message;
 
     //Accept and incoming connection
-    puts("Waiting for incoming connections...");
+    puts("server listening: ");
     c = sizeof(struct sockaddr_in);
     while ((new_socket = accept(socket, (struct sockaddr *) &client, (socklen_t *) &c))) {
         if (new_socket == -1) {
             perror("accept failed");
         }
 
-        the_socket = new_socket;
         puts("Connection accepted");
         //Reply to the client
 
@@ -177,9 +132,10 @@ int bind_connection_handler(int socket) {
         new_sock = malloc(1);
         *new_sock = new_socket;
 
-        Socket* socket = create_socket(new_sock, connection_thread);
+        Socket* socket_instance = create_socket(new_sock, connection_thread);
+        put_socket(socket_instance);
 
-        if (pthread_create(connection_thread, NULL, connection_handler, (void *) socket) < 0) {
+        if (pthread_create(connection_thread, NULL, handler, (void *) socket_instance) < 0) {
             perror("could not create thread");
             return 1;
         }
@@ -193,13 +149,15 @@ int bind_connection_handler(int socket) {
         perror("accept failed");
         return 1;
     }
+
+    return 0;
 }
 
 
 void broadcast(char *message) {
-    if (send(the_socket, message, strlen(message), 0) < 0) {
-        puts("Send failed");
-    }
+//    if (send(the_socket, message, strlen(message), 0) < 0) {
+//        puts("Send failed");
+//    }
 }
 
 

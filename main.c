@@ -1,15 +1,7 @@
-#include<stdio.h>
-#include<string.h>    //strlen
-#include<stdlib.h>    //strlen
-#include<sys/socket.h>
-#include<arpa/inet.h> //inet_addr
-#include<unistd.h>    //write
-
-#include<pthread.h> //for threading , link with lpthread
-#include <signal.h>
-
+#include "libs.h"
 #include "net.h"
 #include "input.h"
+#include "game.h"
 
 void signal_handler(int sig)
 {
@@ -27,11 +19,15 @@ void create_signal_handler() {
 
 int main(int argc , char *argv[])
 {
+
+    unsigned char a[3] = {255, 2, 3};
+
     create_signal_handler();
     create_input_reader_thread();
+    create_game();
 
     int listen_socket = create_server();
-    bind_connection_handler(listen_socket);
+    bind_connection_handler(listen_socket, connection_handler);
 
     return 0;
 }

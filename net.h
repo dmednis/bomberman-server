@@ -1,6 +1,8 @@
 #ifndef BOMBERMAN_SERVER_NET_H
 #define BOMBERMAN_SERVER_NET_H
 
+#include "libs.h"
+
 typedef struct Socket {
     struct Socket* next;
     struct Socket* prev;
@@ -18,17 +20,17 @@ Socket* create_socket(int*, pthread_t*);
 
 SocketList *create_socketlist();
 
-Socket* put_socket(SocketList*, Socket*);
+Socket* put_socket(Socket*);
 
-void delete_socket(SocketList*, Socket*);
+void delete_socket(Socket*);
 
 int create_server();
 
 void stop_server();
 
-int bind_connection_handler(int);
+int bind_connection_handler(int, void(*));
 
-void *connection_handler(void *);
+//void *connection_handler(void *);
 
 void broadcast(char*);
 
