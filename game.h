@@ -3,7 +3,7 @@
 
 #include "libs.h"
 #include "net.h"
-#include "player.h"
+
 
 enum PacketType {
     PT_JOIN_REQ = 1,
@@ -26,22 +26,59 @@ enum GameState {
     GS_GAMEOVER = 3,
 };
 
+enum PlayerState {
+    PS_UNREADY = 0,
+    PS_READY = 1,
+};
+
+typedef struct Player{
+    int id;
+    int state;
+    char* name;
+    time_t last_ping;
+
+    Socket* socket;
+
+    struct Player *next;
+    struct Player *prev;
+} Player;
+
+typedef struct {
+    Player* head;
+    Player* tail;
+    int size;
+} PlayerList;
+
 typedef struct {
     int player_id_seq;
     int state;
     PlayerList* players;
 } Game;
 
+PlayerList *create_playerlist();
+
+Player *create_player(int, char*, Socket*);
+
+Player *add_player(Game*, Player*);
+
+void remove_player(Game*, Player*);
+
+Game* create_game();
+
 void *connection_handler(void *);
 
-void handle_join_request(Socket *socket, Player *player, char *payload);
+void handle_join_request(Socket *socket, Player *player, unsigned char *payload);
 
-void handle_keepalive_packet(Socket *socket, Player *player, char *payload);
+void send_join_response(Socket *socket, Player *player, int code);
 
-void handle_player_ready_packet(Socket *socket, Player *player, char *payload);
+void send_lobby_status(Game *game);
 
-void handle_player_input_packet(Socket *socket, Player *player, char *payload);
+void handle_keepalive_packet(Socket *socket, Player *player, unsigned char *payload);
 
-void handle_player_disconnect_packet(Socket *socket, Player *player, char *payload);
+void handle_player_ready_packet(Socket *socket, Player *player, unsigned char *payload);
+
+void handle_player_input_packet(Socket *socket, Player *player, unsigned char *payload);
+
+void handle_player_disconnect_packet(Socket *socket, Player *player, unsigned char *payload);
 
 #endif //BOMBERMAN_SERVER_GAME_H

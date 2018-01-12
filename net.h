@@ -32,7 +32,7 @@ int bind_connection_handler(int, void(*));
 
 //void *connection_handler(void *);
 
-void broadcast(char*);
+void broadcast(unsigned char*, int);
 
 void net_error_handler();
 

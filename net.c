@@ -154,10 +154,12 @@ int bind_connection_handler(int socket, void(*handler)) {
 }
 
 
-void broadcast(char *message) {
-//    if (send(the_socket, message, strlen(message), 0) < 0) {
-//        puts("Send failed");
-//    }
+void broadcast(unsigned char *message, int length) {
+    Socket* curr = socketlist->head;
+    while (curr) {
+        send(*curr->socket, message, (size_t)length, 0);
+        curr = curr->next;
+    }
 }
 
 
