@@ -3,6 +3,8 @@
 Game* game;
 
 
+
+
 /**
  *
  * @return
@@ -43,6 +45,7 @@ Player *create_player(int id, char* name, Socket* socket) {
     player->id = id;
     player->name = name;
     player->socket = socket;
+    player->state = PS_UNREADY;
     player->last_ping = time(NULL);
 
     player->next = NULL;
@@ -122,7 +125,7 @@ void *connection_handler(void *socket) {
         char packet_code = payload[0];
         switch (packet_code) {
             case PT_JOIN_REQ: {
-                handle_join_request(sock, player, payload);
+                player = handle_join_request(sock, player, payload);
                 break;
             }
             case PT_KEEPALIVE: {
@@ -142,7 +145,7 @@ void *connection_handler(void *socket) {
                 break;
             }
             default: {
-                handle_join_request(sock, player, payload);
+                player = handle_join_request(sock, player, payload);
                 break;
             }
         }
@@ -152,7 +155,6 @@ void *connection_handler(void *socket) {
 
     if (read_size == 0) {
         remove_player(game, player);
-        delete_socket(sock);
         send_lobby_status(game);
         puts("Client disconnected");
         fflush(stdout);
@@ -171,11 +173,20 @@ void *connection_handler(void *socket) {
  * @param payload
  * @return
  */
-char *parse_join_packet(unsigned char *payload) {
-    char* name = malloc(24);
-    memmove(name, payload + 1, 23);
-    name[23] = 0;
-    puts(name);
+char *parse_join_packet(const unsigned char *payload) {
+    char *name = malloc(24);
+    bzero(name, 24);
+
+    int i;
+    for (i = 0; i < 23; i++) {
+        char character = payload[i + 1];
+        if (character < 32 || character > 126) {
+            name[i] = 0;
+            break;
+        }
+        name[i] = character;
+    }
+
     return name;
 }
 
@@ -186,9 +197,10 @@ char *parse_join_packet(unsigned char *payload) {
  * @param player
  * @param payload
  */
-void handle_join_request(Socket *socket, Player *player, unsigned char *payload) {
+Player * handle_join_request(Socket *socket, Player *player, unsigned char *payload) {
     if (player != NULL) {
         send_join_response(socket, NULL, 3);
+        return player;
     } else if (game->state != GS_LOBBY) {
         send_join_response(socket, NULL, 1);
     } else if (game->player_id_seq == 255) {
@@ -196,13 +208,15 @@ void handle_join_request(Socket *socket, Player *player, unsigned char *payload)
     } else {
         char* name = parse_join_packet(payload);
         if (name != NULL) {
-            player = create_player(game->player_id_seq++, name, socket);
+            player = create_player(game->player_id_seq, name, socket);
+            game->player_id_seq++;
             add_player(game, player);
         }
         send_join_response(socket, player, 0);
         send_lobby_status(game);
+        return player;
     }
-
+    return NULL;
 }
 
 
@@ -242,8 +256,9 @@ void send_lobby_status(Game *game) {
     offset += 1;
 
     Player* player = game->players->head;
-
+    puts("====================");
     while (player) {
+        printf("ID: %d NAME: %s READY: %d\n", player->id, player->name, player->state);
         memset(message + offset, player->id, 1);
         offset += 1;
         memmove(message + offset, player->name, 23);
@@ -252,7 +267,7 @@ void send_lobby_status(Game *game) {
         offset +=1;
         player = player->next;
     }
-
+    puts("====================");
     broadcast(message, offset);
     free(message);
 }
@@ -265,7 +280,7 @@ void send_lobby_status(Game *game) {
  * @param payload
  */
 void handle_keepalive_packet(Socket *socket, Player *player, unsigned char *payload) {
-
+    player->last_ping = time(NULL);
 }
 
 
@@ -276,6 +291,93 @@ void handle_keepalive_packet(Socket *socket, Player *player, unsigned char *payl
  * @param payload
  */
 void handle_player_ready_packet(Socket *socket, Player *player, unsigned char *payload) {
+    if (game->state == GS_LOBBY) {
+        player->state = PS_PREREADY;
+    } else if (game->state == GS_PREGAME) {
+        player->state = PS_READY;
+    } else {
+        return;
+    }
+
+    check_player_readiness();
+}
+
+
+/**
+ *
+ */
+void check_player_readiness() {
+    Player* player = game->players->head;
+
+    int ready;
+
+    if (game->state == GS_LOBBY) {
+        ready = PS_PREREADY;
+        while (player) {
+            if (player->state != PS_PREREADY) {
+                ready = PS_UNREADY;
+            }
+            player = player->next;
+        }
+        if (ready == PS_PREREADY) {
+            start_pregame();
+        }
+    } else if (game->state == GS_PREGAME) {
+        ready = PS_READY;
+        while (player) {
+            if (player->state != PS_READY) {
+                ready = PS_PREREADY;
+            }
+            player = player->next;
+        }
+        if (ready == PS_READY) {
+            start_game();
+        }
+    } else {
+        return;
+    }
+
+
+}
+
+
+/**
+ *
+ */
+void start_pregame() {
+    game->state = GS_PREGAME;
+    send_game_start();
+}
+
+
+/**
+ *
+ */
+void start_game() {
+    game->state = GS_GAME;
+}
+
+
+/**
+ *
+ */
+void send_game_start() {
+
+}
+
+
+/**
+ *
+ */
+void send_objects() {
+
+}
+
+
+/**
+ *
+ */
+void send_map_update() {
 
 }
 
@@ -298,5 +400,5 @@ void handle_player_input_packet(Socket *socket, Player *player, unsigned char *p
  * @param payload
  */
 void handle_player_disconnect_packet(Socket *socket, Player *player, unsigned char *payload) {
-
+    close(*socket->socket);
 }

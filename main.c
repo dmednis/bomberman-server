@@ -20,8 +20,6 @@ void create_signal_handler() {
 int main(int argc , char *argv[])
 {
 
-    unsigned char a[3] = {255, 2, 3};
-
     create_signal_handler();
     create_input_reader_thread();
     create_game();

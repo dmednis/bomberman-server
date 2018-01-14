@@ -28,7 +28,8 @@ enum GameState {
 
 enum PlayerState {
     PS_UNREADY = 0,
-    PS_READY = 1,
+    PS_PREREADY = 1,
+    PS_READY = 2,
 };
 
 typedef struct Player{
@@ -67,7 +68,7 @@ Game* create_game();
 
 void *connection_handler(void *);
 
-void handle_join_request(Socket *socket, Player *player, unsigned char *payload);
+Player * handle_join_request(Socket *socket, Player *player, unsigned char *payload);
 
 void send_join_response(Socket *socket, Player *player, int code);
 
@@ -76,6 +77,18 @@ void send_lobby_status(Game *game);
 void handle_keepalive_packet(Socket *socket, Player *player, unsigned char *payload);
 
 void handle_player_ready_packet(Socket *socket, Player *player, unsigned char *payload);
+
+void check_player_readiness();
+
+void start_pregame();
+
+void start_game();
+
+void send_game_start();
+
+void send_objects();
+
+void send_map_update();
 
 void handle_player_input_packet(Socket *socket, Player *player, unsigned char *payload);
 

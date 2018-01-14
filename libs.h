@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <assert.h>
 #include <ncurses.h>
+#include <zconf.h>
 
 
 #endif //BOMBERMAN_SERVER_LIBS_H
